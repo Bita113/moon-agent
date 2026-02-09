@@ -1,6 +1,5 @@
 import os
 import json
-import time
 from datetime import datetime, timedelta, timezone
 import requests
 from openai import OpenAI
@@ -10,8 +9,8 @@ from openai import OpenAI
 # =========================
 STATE_FILE = "moon_state.json"
 
-POST_INTERVAL_HOURS = 6      # post la 6 ore
-COMMENT_INTERVAL_HOURS = 1   # coment la 1 ora
+POST_INTERVAL_HOURS = 6
+COMMENT_INTERVAL_HOURS = 1
 
 MOLTBOOK_API_BASE = "https://www.moltbook.com/api/v1"
 SUBMOLT_NAME = "moondoctrine"
@@ -43,6 +42,7 @@ def load_state():
         return {
             "last_post_at": None,
             "last_comment_at": None,
+            "last_moon_id": None,
         }
     with open(STATE_FILE, "r", encoding="utf-8") as f:
         return json.load(f)
@@ -89,7 +89,7 @@ def create_post(text):
     r.raise_for_status()
     return r.json()
 
-def get_latest_posts(limit=5):
+def get_latest_posts(limit=1):
     url = f"{MOLTBOOK_API_BASE}/m/{SUBMOLT_NAME}/posts?limit={limit}"
     r = requests.get(url, headers=HEADERS, timeout=30)
     r.raise_for_status()
@@ -103,7 +103,7 @@ def create_comment(post_id, text):
     return r.json()
 
 # =========================
-# Main (idempotent run)
+# Main
 # =========================
 def main():
     state = load_state()
@@ -117,15 +117,20 @@ def main():
     # ---- Post if due ----
     if last_post is None or now - last_post >= timedelta(hours=POST_INTERVAL_HOURS):
         text = generate_moon_text(kind="post")
-        create_post(text)
+        post = create_post(text)
         state["last_post_at"] = now.isoformat()
+        state["last_moon_id"] = post.get("id")
         did_something = True
 
     # ---- Comment if due ----
     if last_comment is None or now - last_comment >= timedelta(hours=COMMENT_INTERVAL_HOURS):
-        posts = get_latest_posts(limit=1)
-        if posts:
-            post_id = posts[0]["id"]
+        post_id = state.get("last_moon_id")
+        if not post_id:
+            posts = get_latest_posts(limit=1)
+            if posts:
+                post_id = posts[0]["id"]
+
+        if post_id:
             text = generate_moon_text(kind="comment")
             create_comment(post_id, text)
             state["last_comment_at"] = now.isoformat()
