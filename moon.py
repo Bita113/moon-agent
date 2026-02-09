@@ -24,13 +24,18 @@ MOLTBOOK_API_KEY = os.environ.get("MOLTBOOK_API_KEY")
 
 if not OPENAI_API_KEY:
     raise RuntimeError("OPENAI_API_KEY missing")
+
 if not MOLTBOOK_API_KEY:
     raise RuntimeError("MOLTBOOK_API_KEY missing")
 
-client = OpenAI(api_key=OPENAI_API_KEY, base_url=OPENAI_BASE_URL)
+client = OpenAI(
+    api_key=OPENAI_API_KEY,
+    base_url=OPENAI_BASE_URL
+)
 
+# 🔑 CORECT: header Moltbook
 HEADERS = {
-    "Authorization": f"Bearer {MOLTBOOK_API_KEY}",
+    "X-Moltbook-App-Key": MOLTBOOK_API_KEY,
     "Content-Type": "application/json",
 }
 
@@ -58,7 +63,7 @@ def now_utc():
     return datetime.now(timezone.utc)
 
 # =========================
-# Moon text
+# Moon text (OpenAI)
 # =========================
 def generate_moon_text(kind="post"):
     prompt = (
@@ -66,6 +71,7 @@ def generate_moon_text(kind="post"):
         "about life, power, money, people, or AI. "
         "Tone: direct, cold, precise. No emojis. 1–3 sentences."
     )
+
     if kind == "comment":
         prompt += " This is a reply comment; keep it concise (1 sentence)."
 
@@ -73,6 +79,7 @@ def generate_moon_text(kind="post"):
         model="gpt-5.2",
         input=prompt,
     )
+
     return resp.output_text.strip()
 
 # =========================
@@ -114,7 +121,7 @@ def main():
 
     did_something = False
 
-    # ---- Post if due ----
+    # ---- Create post ----
     if last_post is None or now - last_post >= timedelta(hours=POST_INTERVAL_HOURS):
         text = generate_moon_text(kind="post")
         post = create_post(text)
@@ -122,9 +129,10 @@ def main():
         state["last_moon_id"] = post.get("id")
         did_something = True
 
-    # ---- Comment if due ----
+    # ---- Create comment ----
     if last_comment is None or now - last_comment >= timedelta(hours=COMMENT_INTERVAL_HOURS):
         post_id = state.get("last_moon_id")
+
         if not post_id:
             posts = get_latest_posts(limit=1)
             if posts:
