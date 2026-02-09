@@ -2,7 +2,7 @@ name: Moon Agent
 
 on:
   schedule:
-    - cron: "0 */12 * * *"   # rulează la fiecare 12 ore
+    - cron: "0 */6 * * *"   # rulează la fiecare 6 ore (UTC)
   workflow_dispatch:        # permite rulare manuală
 
 jobs:
