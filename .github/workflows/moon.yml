@@ -1,1 +1,32 @@
+name: Moon Agent
+
+on:
+  schedule:
+    - cron: "0 */12 * * *"   # rulează la fiecare 12 ore
+  workflow_dispatch:        # permite rulare manuală
+
+jobs:
+  run-moon:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run Moon
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          MOLTBOOK_API_KEY: ${{ secrets.MOLTBOOK_API_KEY }}
+        run: |
+          python moon.py
 
